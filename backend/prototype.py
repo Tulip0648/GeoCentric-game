@@ -10,6 +10,8 @@ This script implements:
 import math
 import random
 
+OCTANT_NAMES = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
 # ==============================================================================
 # 1. THE MATH: Mercator Angle Calculation
 # ==============================================================================
@@ -70,8 +72,6 @@ def angle_to_octant(angle_deg: float) -> int:
     shifted = (angle_deg + 22.5) % 360
     return int(shifted // 45)
 
-OCTANT_NAMES = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-
 
 # ==============================================================================
 # 2. SAMPLE DATASET (Represented as a list of Python dictionaries)
@@ -130,44 +130,45 @@ def select_clues(target_city: dict, city_pool: list[dict], num_clues: int = 5) -
         }
         octant_buckets[octant].append(city_with_bearing)
 
-    # Step 2: Filter non-empty segments
-    available_octants = [octant for octant, cities in octant_buckets.items() if len(cities) > 0]
+    # Step 2: Total capacity check
+    total_available_cities = sum(len(cities) for cities in octant_buckets.values())
+    if total_available_cities < num_clues:
+        raise ValueError(
+            f"Not enough cities in pool to generate {num_clues} clues! Only found {total_available_cities}."
+        )
 
-    if not available_octants:
-        raise ValueError("Not enough cities in pool to generate clues!")
-
-    # Step 3: Choose segments based on availability
-    # Case A: More than 5 available -> choose 5 distinct segments uniformly at random
-    if len(available_octants) > num_clues:
-        chosen_octants = random.sample(available_octants, num_clues)
-    # Case B: Exactly 5 available -> choose all 5
-    elif len(available_octants) == num_clues:
-        chosen_octants = list(available_octants)
-    # Case C: Less than 5 available -> choose all available, then sample from them to fill the rest
-    else:
-        chosen_octants = list(available_octants)
-        while len(chosen_octants) < num_clues:
-            chosen_octants.append(random.choice(available_octants))
-
-    # Step 4: Pick 1 unique city from each chosen segment
+    # Step 3: Initialize remaining pools (only non-empty octants)
+    # Key: octant index (0..7), Value: list of candidate cities in that octant
+    remaining_pools = {o: list(cities) for o, cities in octant_buckets.items() if len(cities) > 0}
     selected_clues = []
-    # To prevent duplicate city picks, maintain a copy of each bucket that we can pop from
-    remaining_pool = {octant: list(cities) for octant, cities in octant_buckets.items()}
 
-    for octant in chosen_octants:
-        # If this octant still has available cities, pick one
-        if remaining_pool[octant]:
-            picked_city = random.choice(remaining_pool[octant])
-            remaining_pool[octant].remove(picked_city)
-            selected_clues.append(picked_city)
-        else:
-            # Fallback: If this octant ran out of cities, pick from any remaining non-empty octant
-            non_empty_octants = [o for o, c in remaining_pool.items() if len(c) > 0]
-            if non_empty_octants:
-                fallback_octant = random.choice(non_empty_octants)
-                picked_city = random.choice(remaining_pool[fallback_octant])
-                remaining_pool[fallback_octant].remove(picked_city)
-                selected_clues.append(picked_city)
+    def pick_city_from_octant(octant: int) -> dict:
+        """Picks a random city from the octant, removes it from pool, and cleans up empty octants."""
+        city = random.choice(remaining_pools[octant])
+        remaining_pools[octant].remove(city)
+        # If this octant has no cities left, eliminate it so it cannot be chosen again!
+        if len(remaining_pools[octant]) == 0:
+            del remaining_pools[octant]
+        return city
+
+    # Step 4: Phase 1 - Angular Diversity (Pick at most 1 city per available octant)
+    available_octants = list(remaining_pools.keys())
+    if len(available_octants) >= num_clues:
+        # We have >= num_clues directions: pick distinct octants uniformly at random
+        first_pass_octants = random.sample(available_octants, num_clues)
+    else:
+        # Fewer directions than needed: take 1 city from every available direction first
+        first_pass_octants = list(available_octants)
+
+    for octant in first_pass_octants:
+        selected_clues.append(pick_city_from_octant(octant))
+
+    # Step 5: Phase 2 - Fill remaining slots from octants that STILL have cities
+    while len(selected_clues) < num_clues:
+        # remaining_pools ONLY contains octants with at least 1 city left!
+        eligible_octants = list(remaining_pools.keys())
+        chosen_octant = random.choice(eligible_octants)
+        selected_clues.append(pick_city_from_octant(chosen_octant))
 
     # Sort clues clockwise by bearing for clean display around the compass
     selected_clues.sort(key=lambda c: c["bearing"])

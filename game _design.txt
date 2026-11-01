@@ -21,7 +21,7 @@
     - divide directions into 8 equal segments.
     - filter non-empty segments. wrt the correct city.
     - if > 5 segments available, choose any 5 segments uniformly at random. 
-    - if < 5 segments available, choose all available segments. And then the remaining to be choosen randomly untill 5 selected.
+    - if < 5 segments available, choose all available segments. And then the remaining to be choosen randomly until 5 selected.
     - if == 5 segments available, choose all available segments.
     - for each segment choice, choose a city uniformly at random from that segment. if a city is chosen more than once, then choose another city uniformly at random from that segment.
     - keep doing until 5 distinct cities are chosen.
