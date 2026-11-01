@@ -10,9 +10,9 @@
 - use Mercator Projection of Earth and then use Latitude and Longitude to calculate angles for now. So that it gives exact visual alignment with Google Maps.
 
 - Data set: 
-    - [city_name, lat, long, INDIA/WORLD, {country_name}/{state/UT}, <sort_rank>]. (looks good?)
+    - [city_name, lat, lon, state, country, scope (INDIA/WORLD), population, tier, <sort_rank>]. (looks good?)
     - Top N Cities in India (50, 100, 350, 500)
-    - All World Capitals.
+    - All World Capitals. (YET TO BE DONE).
 
 - Clue finding Algorithm: 
     - input : set of correct city (lat, long).

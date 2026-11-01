@@ -2,3 +2,5 @@
 - distance to clues?
 - scale to world. (Options = {World, India} U Continents) (and maybe all countries later?).
 - Spherical Mode: solve Cartesian Distortion by using spherical trignometry.
+- take the different names available in the GeoNames dump for cities to enhance the guess system. (e.g. a city may have multiple names in different languages, or different spellings).
+- cracked mode: all 3700 ish cities
