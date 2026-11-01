@@ -1,0 +1,576 @@
+/* ==============================================================================
+   GeoCentric - Modern Dark Mode Design System
+   ============================================================================== */
+
+:root {
+  /* Color Tokens */
+  --bg-dark: #0b0f19;
+  --bg-card: rgba(18, 24, 38, 0.75);
+  --bg-input: #151d30;
+  --bg-hover: #1f2a44;
+  
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-focus: #3b82f6;
+  
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  
+  --accent: #3b82f6;          /* Vibrant Blue */
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  --success: #10b981;         /* Emerald Green */
+  --error: #ef4444;           /* Coral Red */
+  --warning: #f59e0b;         /* Amber Yellow */
+
+  /* Typography */
+  --font-logo: 'Outfit', -apple-system, sans-serif;
+  --font-ui: 'Inter', -apple-system, sans-serif;
+
+  /* Elevation & Blur */
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --glass-blur: blur(12px);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+html {
+  font-size: 18px; /* Scales everything by +12.5% to +18% */
+}
+
+/* Reset & Box Sizing */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08), transparent 45%),
+    radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.04), transparent 40%);
+}
+
+#app {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 32px;
+}
+
+
+
+/* ==============================================================================
+   Header Navigation
+   ============================================================================== */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-center {
+  text-align: center;
+}
+
+.logo {
+  font-family: var(--font-logo);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-main);
+}
+
+.logo-accent {
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+.subtitle {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: -2px;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 1rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.pill-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.pill-select:focus {
+  border-color: var(--accent);
+}
+
+/* ==============================================================================
+   Game Container & Status Bar
+   ============================================================================== */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding-top: 14px;
+  gap: 16px;
+}
+
+.status-bar {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+
+.status-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 6px;
+}
+
+.hints-box {
+  display: flex;
+  align-items: center;
+}
+
+.tokens-row {
+  display: flex;
+  gap: 6px;
+}
+
+.hint-btn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hint-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #fbbf24;
+}
+
+.hint-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.badge {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+/* ==============================================================================
+   Compass Board (SVG Viewport)
+   ============================================================================== */
+.compass-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.compass-wrapper {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 1 / 1;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0) 70%);
+  border-radius: 50%;
+  position: relative;
+}
+
+#compass-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* SVG Elements Styling */
+.svg-center-circle {
+  fill: #0f172a;
+  stroke: #38bdf8;
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
+  transition: all 0.3s ease;
+}
+
+.svg-center-text {
+  font-family: var(--font-logo);
+  font-size: 23px;
+  font-weight: 800;
+  fill: #f8fafc;
+  text-anchor: middle;
+  dominant-baseline: central;
+  letter-spacing: 0.05em;
+}
+
+.svg-arrow-line {
+  stroke: #94a3b8;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  transition: stroke 0.3s ease;
+}
+
+.svg-arrow-head {
+  fill: #94a3b8;
+  transition: fill 0.3s ease;
+}
+
+.svg-clue-pill {
+  fill: rgba(18, 26, 44, 0.72);
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.svg-clue-pill:hover {
+  fill: rgba(28, 42, 70, 0.85);
+  stroke: rgba(56, 189, 248, 0.7);
+  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.35));
+}
+
+.svg-clue-text-title {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  fill: #f8fafc;
+  text-anchor: middle;
+}
+
+.svg-clue-text-sub {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  fill: #94a3b8;
+  text-anchor: middle;
+}
+
+
+/* ==============================================================================
+   Past Guesses Grid
+   ============================================================================== */
+.guesses-section {
+  width: 100%;
+}
+
+.guesses-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.guess-slot {
+  height: 48px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: all 0.3s ease;
+}
+
+.guess-slot.wrong {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  text-decoration: line-through;
+}
+
+.guess-slot.correct {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+/* ==============================================================================
+   Input Section & Autocomplete
+   ============================================================================== */
+.input-section {
+  width: 100%;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  gap: 10px;
+}
+
+#city-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+#city-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.submit-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0 28px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+.submit-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Autocomplete Suggestions Dropdown */
+.suggestions-list {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #131b2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+  z-index: 50;
+  backdrop-filter: var(--glass-blur);
+}
+
+.suggestions-list li {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.suggestions-list li:hover,
+.suggestions-list li.active {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.suggestions-list li .city-state {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* ==============================================================================
+   Modals
+   ============================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #111827;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-card h2 {
+  font-family: var(--font-logo);
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+.modal-card ul {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.solution-highlight {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1.5px solid var(--success);
+  color: #34d399;
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin: 6px 0;
+}
+
+.modal-close-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==============================================================================
+   Desktop Responsive Dashboard Layout (Screens >= 860px)
+   ============================================================================== */
+@media (min-width: 860px) {
+  #app {
+    max-width: 1240px;
+    padding: 24px 36px 48px;
+  }
+
+  .app-header {
+    padding-bottom: 24px;
+  }
+
+  .logo {
+    font-size: 2.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .game-container {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas:
+      "compass status"
+      "compass guesses"
+      "compass input"
+      "compass .";
+    gap: 24px 44px;
+    align-items: center;
+    padding-top: 24px;
+  }
+
+  .compass-section {
+    grid-area: compass;
+    width: 100%;
+  }
+
+  .compass-wrapper {
+    max-width: 660px;
+  }
+
+
+  .status-bar {
+    grid-area: status;
+  }
+
+  .guesses-section {
+    grid-area: guesses;
+  }
+
+  .input-section {
+    grid-area: input;
+  }
+}
+

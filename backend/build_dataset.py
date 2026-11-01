@@ -91,6 +91,7 @@ def sort_cities_and_assign_tier(cities:list[dict]) -> list[dict]:
     sort the cities in decreasing order of population.
 
     assign tier:
+        top 20 get teir = '20'
         top 50 get teir = '50'
         top 100 get tier = '100'
         top 350 get tier = '350'
@@ -99,17 +100,19 @@ def sort_cities_and_assign_tier(cities:list[dict]) -> list[dict]:
     """
     
     sorted_cities = sorted(cities, key=lambda x: x["population"], reverse=True)
-    tiers = [50, 100, 350, 500]
+    tiers = [20, 50, 100, 350, 500]
 
     # assign tier
     for i, city in enumerate(sorted_cities):
         if i < tiers[0]:
-            city["tier"] = 50
+            city["tier"] = 20
         elif i < tiers[1]:
-            city["tier"] = 100
+            city["tier"] = 50
         elif i < tiers[2]:
-            city["tier"] = 350
+            city["tier"] = 100
         elif i < tiers[3]:
+            city["tier"] = 350
+        elif i < tiers[4]:
             city["tier"] = 500
         else:
             city["tier"] = 0

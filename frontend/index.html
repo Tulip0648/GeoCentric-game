@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoCentric — Daily Geography Compass Puzzle</title>
+  
+  <!-- Premium Google Fonts: Outfit for titles, Inter for body/UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- App Container -->
+  <div id="app">
+    
+    <!-- Header / Navbar -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="help-btn" class="icon-btn" title="How to Play" aria-label="How to play">❓</button>
+      </div>
+      
+      <div class="header-center">
+        <h1 class="logo">GEO<span class="logo-accent">CENTRIC</span></h1>
+        <span class="subtitle">Find the mystery city in the center</span>
+      </div>
+      
+      <div class="header-right">
+        <!-- Tier / Difficulty Selector -->
+        <select id="tier-select" class="pill-select" title="Select Difficulty Tier">
+          <option value="20">Very Easy (Top 20)</option>
+          <option value="50">Easy (Top 50)</option>
+          <option value="100" selected>Medium (Top 100)</option>
+          <option value="350">Hard (Top 350)</option>
+          <option value="500">Expert (Top 500)</option>
+        </select>
+        <button id="refresh-btn" class="icon-btn" title="New Practice Puzzle" aria-label="New Practice Puzzle">🔄</button>
+      </div>
+    </header>
+
+    <!-- Main Game Board -->
+    <main class="game-container">
+      
+      <!-- Top Status Bar: Clue count & Hints left -->
+      <section class="status-bar">
+        <div class="hints-box">
+          <span class="status-label">Hints:</span>
+          <div id="hints-tokens" class="tokens-row">
+            <button class="hint-btn" data-hint="1" title="Reveal distance to 1 clue">💡 1</button>
+            <button class="hint-btn" data-hint="2" title="Reveal distance to 1 clue">💡 2</button>
+            <button class="hint-btn" data-hint="3" title="Reveal distance to 1 clue">💡 3</button>
+          </div>
+        </div>
+        <div class="guesses-left-box">
+          <span class="status-label">Attempts:</span>
+          <span id="guesses-count" class="badge">0 / 6</span>
+        </div>
+      </section>
+
+      <!-- The Compass Canvas (SVG) -->
+      <section class="compass-section">
+        <div class="compass-wrapper">
+          <!-- The SVG viewbox has generous padding so pills pushed outward never clip -->
+          <svg id="compass-svg" viewBox="-90 -90 780 780" preserveAspectRatio="xMidYMid meet">
+            <!-- Dynamic elements (center circle, arrows, labels) will be drawn here by JavaScript -->
+          </svg>
+        </div>
+      </section>
+
+
+      <!-- Past Guesses / Strikes -->
+      <section class="guesses-section">
+        <div id="guesses-list" class="guesses-grid">
+          <!-- 6 slots for player attempts -->
+          <div class="guess-slot" id="slot-0"></div>
+          <div class="guess-slot" id="slot-1"></div>
+          <div class="guess-slot" id="slot-2"></div>
+          <div class="guess-slot" id="slot-3"></div>
+          <div class="guess-slot" id="slot-4"></div>
+          <div class="guess-slot" id="slot-5"></div>
+        </div>
+      </section>
+
+      <!-- Guess Input & Autocomplete Area -->
+      <section class="input-section">
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            id="city-input" 
+            placeholder="Type an Indian city (e.g. Mumbai, Pune)..." 
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="submit-btn" class="submit-btn">Guess</button>
+          
+          <!-- Dropdown suggestions list -->
+          <ul id="suggestions-list" class="suggestions-list hidden"></ul>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Help Modal Dialog -->
+    <div id="help-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2>How to Play GeoCentric</h2>
+        <p>A mystery city is hidden in the center of the compass circle.</p>
+        <ul>
+          <li><strong>Arrows:</strong> Point directly towards surrounding reference cities based on their true geographic bearing.</li>
+          <li><strong>Reference Cities:</strong> Displayed at the tip of each arrow with their state.</li>
+          <li><strong>Hints:</strong> You have 3 hints to reveal the exact distance (km) to any clue city of your choice.</li>
+          <li><strong>Goal:</strong> Guess the central mystery city within <strong>6 attempts</strong>.</li>
+        </ul>
+        <button id="close-modal-btn" class="modal-close-btn">Got it!</button>
+      </div>
+    </div>
+
+    <!-- Game Over (Win / Loss) Modal -->
+    <div id="game-over-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2 id="game-over-title">Game Over</h2>
+        <p id="game-over-desc"></p>
+        <div id="game-over-solution" class="solution-highlight"></div>
+        <button id="play-again-btn" class="modal-close-btn">Play Another Round</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- The Brain: JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
