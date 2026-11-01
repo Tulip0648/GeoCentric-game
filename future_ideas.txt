@@ -1,0 +1,4 @@
+- zen mode: no initial clues. clues reveal with each wrong guess until all clues revealed or guesses correctly. (maybe use guess as next clue?)
+- distance to clues?
+- scale to world. (Options = {World, India} U Continents) (and maybe all countries later?).
+- Spherical Mode: solve Cartesian Distortion by using spherical trignometry.

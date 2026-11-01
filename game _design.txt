@@ -1,0 +1,28 @@
+- base mode: 4-5 clues, roughly covering different directions. 6 or 10 guesses and 3 hints. (maybe difficulty levels?)
+        - daily puzzle
+        - practice puzzles
+    - clue: fixed length no distance hint
+    - 3 different modes: top 50 / 100 / 350 (or 500) cities by most famous cities (if possible?).
+    - limited to India for now.
+    - a mode for World capitals?
+    - 1 hint reveal distance of 1 clue of choice.
+
+- use Mercator Projection of Earth and then use Latitude and Longitude to calculate angles for now. So that it gives exact visual alignment with Google Maps.
+
+- Data set: 
+    - [city_name, lat, long, INDIA/WORLD, {country_name}/{state/UT}, <sort_rank>]. (looks good?)
+    - Top N Cities in India (50, 100, 350, 500)
+    - All World Capitals.
+
+- Clue finding Algorithm: 
+    - input : set of correct city (lat, long).
+    - output: set of 5 clues (relative positions).
+ 
+    - divide directions into 8 equal segments.
+    - filter non-empty segments. wrt the correct city.
+    - if > 5 segments available, choose any 5 segments uniformly at random. 
+    - if < 5 segments available, choose all available segments. And then the remaining to be choosen randomly untill 5 selected.
+    - if == 5 segments available, choose all available segments.
+    - for each segment choice, choose a city uniformly at random from that segment. if a city is chosen more than once, then choose another city uniformly at random from that segment.
+    - keep doing until 5 distinct cities are chosen.
+    
