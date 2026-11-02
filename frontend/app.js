@@ -426,23 +426,26 @@ function updateStatusUI() {
 }
 
 function updateGuessesUI() {
-  for (let i = 0; i < STATE.maxGuesses; i++) {
-    const slot = document.getElementById(`slot-${i}`);
+  const container = document.getElementById("guesses-list");
+  if (!container) return;
+  container.innerHTML = "";
+
+  STATE.guesses.forEach((guessedName) => {
+    const slot = document.createElement("div");
     slot.className = "guess-slot";
-    slot.textContent = "";
 
-    if (i < STATE.guesses.length) {
-      const guessedName = STATE.guesses[i];
-      slot.textContent = guessedName;
-
-      if (guessedName.toLowerCase() === STATE.targetCity.name.toLowerCase()) {
-        slot.classList.add("correct");
-      } else {
-        slot.classList.add("wrong");
-      }
+    if (guessedName.toLowerCase() === STATE.targetCity.name.toLowerCase()) {
+      slot.classList.add("correct");
+      slot.textContent = `${guessedName} ✅`;
+    } else {
+      slot.classList.add("wrong");
+      slot.textContent = `${guessedName} ❌`;
     }
-  }
+
+    container.appendChild(slot);
+  });
 }
+
 
 function revealClueHint(clueIndex) {
   if (STATE.isGameOver) return;

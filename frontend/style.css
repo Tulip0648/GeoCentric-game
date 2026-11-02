@@ -73,19 +73,19 @@ body {
    ============================================================================== */
 .app-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   padding: 8px 0 16px;
   border-bottom: 1px solid var(--border-color);
 }
 
-.header-center {
+.header-title-row {
   text-align: center;
 }
 
 .logo {
   font-family: var(--font-logo);
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   color: var(--text-main);
@@ -98,10 +98,17 @@ body {
 
 .subtitle {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 400;
   margin-top: -2px;
+}
+
+.header-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .header-left, .header-right {
@@ -109,6 +116,7 @@ body {
   align-items: center;
   gap: 8px;
 }
+
 
 .icon-btn {
   background: var(--bg-card);
@@ -316,31 +324,47 @@ body {
    ============================================================================== */
 .guesses-section {
   width: 100%;
+  min-height: 12px;
 }
 
 .guesses-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .guess-slot {
-  height: 48px;
+  height: 40px;
+  padding: 0 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-dim);
+  animation: popIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition: all 0.3s ease;
 }
 
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .guess-slot.wrong {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.55);
   color: #f87171;
   text-decoration: line-through;
 }
@@ -350,6 +374,7 @@ body {
   border-color: #10b981;
   color: #34d399;
 }
+
 
 /* ==============================================================================
    Input Section & Autocomplete

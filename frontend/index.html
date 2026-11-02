@@ -18,25 +18,27 @@
     
     <!-- Header / Navbar -->
     <header class="app-header">
-      <div class="header-left">
-        <button id="help-btn" class="icon-btn" title="How to Play" aria-label="How to play">❓</button>
-      </div>
-      
-      <div class="header-center">
+      <div class="header-title-row">
         <h1 class="logo">GEO<span class="logo-accent">CENTRIC</span></h1>
         <span class="subtitle">Find the mystery city in the center</span>
       </div>
       
-      <div class="header-right">
-        <!-- Tier / Difficulty Selector -->
-        <select id="tier-select" class="pill-select" title="Select Difficulty Tier">
-          <option value="20">Very Easy (Top 20)</option>
-          <option value="50">Easy (Top 50)</option>
-          <option value="100" selected>Medium (Top 100)</option>
-          <option value="350">Hard (Top 350)</option>
-          <option value="500">Expert (Top 500)</option>
-        </select>
-        <button id="refresh-btn" class="icon-btn" title="New Practice Puzzle" aria-label="New Practice Puzzle">🔄</button>
+      <div class="header-controls-row">
+        <div class="header-left">
+          <button id="help-btn" class="icon-btn" title="How to Play" aria-label="How to play">❓</button>
+        </div>
+        
+        <div class="header-right">
+          <!-- Tier / Difficulty Selector -->
+          <select id="tier-select" class="pill-select" title="Select Difficulty Tier">
+            <option value="20">Very Easy (Top 20)</option>
+            <option value="50">Easy (Top 50)</option>
+            <option value="100" selected>Medium (Top 100)</option>
+            <option value="350">Hard (Top 350)</option>
+            <option value="500">Expert (Top 500)</option>
+          </select>
+          <button id="refresh-btn" class="icon-btn" title="New Practice Puzzle" aria-label="New Practice Puzzle">🔄</button>
+        </div>
       </div>
     </header>
 
@@ -70,18 +72,11 @@
       </section>
 
 
-      <!-- Past Guesses / Strikes -->
+      <!-- Past Guesses / Strikes (Rendered dynamically as attempts happen) -->
       <section class="guesses-section">
-        <div id="guesses-list" class="guesses-grid">
-          <!-- 6 slots for player attempts -->
-          <div class="guess-slot" id="slot-0"></div>
-          <div class="guess-slot" id="slot-1"></div>
-          <div class="guess-slot" id="slot-2"></div>
-          <div class="guess-slot" id="slot-3"></div>
-          <div class="guess-slot" id="slot-4"></div>
-          <div class="guess-slot" id="slot-5"></div>
-        </div>
+        <div id="guesses-list" class="guesses-grid"></div>
       </section>
+
 
       <!-- Guess Input & Autocomplete Area -->
       <section class="input-section">
