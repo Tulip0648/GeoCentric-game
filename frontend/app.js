@@ -550,7 +550,7 @@ function setupEventListeners() {
 
     // Filter cities matching search query
     const matches = STATE.allCities
-      .filter((c) => c.name.toLowerCase().includes(query))
+      .filter((c) => (c.name.toLowerCase().includes(query) && c.tier <= STATE.currentTier))
       .slice(0, 6);
 
     renderSuggestions(matches);
