@@ -52,7 +52,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08), transparent 45%),
+    radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 45%),
     radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.04), transparent 40%);
 }
 
@@ -278,7 +278,7 @@ body {
   width: 100%;
   max-width: min(100%, 75vh);
   aspect-ratio: 1 / 1;
-  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0) 70%);
+  background: radial-gradient(circle at center, var(--accent-glow) 0%, transparent 70%);
   border-radius: 50%;
   position: relative;
 }
@@ -291,10 +291,10 @@ body {
 
 /* SVG Elements Styling */
 .svg-center-circle {
-  fill: #0f172a;
-  stroke: #38bdf8;
+  fill: var(--center-circle-fill, #0f172a);
+  stroke: var(--center-circle-stroke, #38bdf8);
   stroke-width: 3.5;
-  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
+  filter: drop-shadow(0 0 12px var(--accent-glow, rgba(56, 189, 248, 0.4)));
   transition: all 0.3s ease;
 }
 
@@ -309,20 +309,20 @@ body {
 }
 
 .svg-arrow-line {
-  stroke: #94a3b8;
+  stroke: var(--arrow-stroke, #94a3b8);
   stroke-width: 2.8;
   stroke-linecap: round;
   transition: stroke 0.3s ease;
 }
 
 .svg-arrow-head {
-  fill: #94a3b8;
+  fill: var(--arrow-stroke, #94a3b8);
   transition: fill 0.3s ease;
 }
 
 .svg-clue-pill {
-  fill: rgba(18, 26, 44, 0.72);
-  stroke: rgba(255, 255, 255, 0.18);
+  fill: var(--pill-fill, rgba(18, 26, 44, 0.72));
+  stroke: var(--pill-border, rgba(255, 255, 255, 0.18));
   stroke-width: 1.5;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
   backdrop-filter: blur(8px);
@@ -331,9 +331,9 @@ body {
 }
 
 .svg-clue-pill:hover {
-  fill: rgba(28, 42, 70, 0.85);
-  stroke: rgba(56, 189, 248, 0.7);
-  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.35));
+  fill: var(--pill-hover-fill, rgba(28, 42, 70, 0.85));
+  stroke: var(--accent, rgba(56, 189, 248, 0.7));
+  filter: drop-shadow(0 0 14px var(--accent-glow, rgba(56, 189, 248, 0.35)));
 }
 
 .svg-clue-pill.hint-pill {
@@ -479,8 +479,8 @@ body {
   width: 100%;
   height: 50px;
   background: var(--accent);
-  border: none;
-  color: white;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: var(--btn-text, white);
   font-family: var(--font-ui);
   font-size: 1.05rem;
   font-weight: 700;
@@ -489,13 +489,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 14px var(--accent-glow);
   transition: all 0.2s ease;
 }
 
 .submit-btn:hover {
-  background: #2563eb;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px var(--accent-glow);
   transform: translateY(-1px);
 }
 
@@ -516,7 +516,7 @@ body {
   margin-bottom: 6px;
   max-height: 220px;
   overflow-y: auto;
-  background: #131b2e;
+  background: var(--bg-input);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);

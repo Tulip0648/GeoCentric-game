@@ -2,11 +2,11 @@
  * GeoCentric - Web Game Engine (Vanilla JS)
  * -----------------------------------------
  * Handles:
- * 1. Dataset loading (fetch API)
+ * 1. Dataset & Daily Palettes loading (fetch API)
  * 2. Mercator trigonometry & Haversine distance calculations
  * 3. Capacity-aware clue selection algorithm
  * 4. Collision-free SVG Compass rendering with dynamic scaling
- * 5. Hint additions, wrong guess compass plotting, and game state
+ * 5. Hint additions, wrong guess compass plotting, and dynamic themes
  */
 
 // ==============================================================================
@@ -15,6 +15,8 @@
 
 const STATE = {
   allCities: [],
+  palettes: {},          // Loaded from daily_palettes.json (312 curated palettes)
+  currentTheme: "classic", // "classic", "daily", "random", or date key
   currentTier: 100,      // Default: Medium (Top 100)
   targetCity: null,      // The mystery center city
   clues: [],             // Initial reference cities + hints + wrong guesses
@@ -70,14 +72,205 @@ function haversineDistanceKm(lat1, lon1, lat2, lon2) {
   return Math.round(R * c);
 }
 
-// Helper: Calculates shortest angular distance between two angles [0, 360)
 function angularDistance(a1, a2) {
   const diff = Math.abs(a1 - a2) % 360;
   return diff > 180 ? 360 - diff : diff;
 }
 
 // ==============================================================================
-// 3. CLUE SELECTION ALGORITHM (Pure Two-Phase Capacity-Aware)
+// 3. COLOR & THEME SYSTEM (Dynamic 5-Slot Semantic Injection)
+// ==============================================================================
+
+function hexToRgb(hex) {
+  const clean = hex.replace("#", "");
+  const num = parseInt(clean, 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h = Math.round(h * 60);
+  }
+  return { h, s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function getRelativeLuminance(r, g, b) {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+function getDailyPaletteKey(date = new Date()) {
+  if (!STATE.palettes || Object.keys(STATE.palettes).length === 0) return null;
+
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const exactKey = `${yyyy}-${mm}-${dd}`;
+  if (STATE.palettes[exactKey]) return exactKey;
+
+  const mdKey = `2026-${mm}-${dd}`;
+  if (STATE.palettes[mdKey]) return mdKey;
+
+  // Stable daily rotation across the 312 palette collection
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
+  const keys = Object.keys(STATE.palettes);
+  return keys[Math.abs(dayOfYear) % keys.length];
+}
+
+function applyTheme(themeKey) {
+  const root = document.documentElement;
+
+  if (themeKey === "classic" || !STATE.palettes || Object.keys(STATE.palettes).length === 0) {
+    STATE.currentTheme = "classic";
+    localStorage.setItem("geocentric_theme", "classic");
+
+    // Clear dynamic properties to cleanly revert to original :root CSS variables
+    const customProps = [
+      "--bg-dark", "--bg-card", "--bg-input", "--bg-hover",
+      "--accent", "--accent-glow", "--secondary", "--border-focus",
+      "--center-circle-fill", "--center-circle-stroke", "--center-question",
+      "--arrow-stroke", "--pill-fill", "--pill-border", "--pill-hover-fill",
+      "--text-main", "--text-muted", "--btn-text",
+    ];
+    customProps.forEach((prop) => root.style.removeProperty(prop));
+
+    const themeSelect = document.getElementById("theme-select");
+    if (themeSelect) {
+      themeSelect.value = "classic";
+      const dailyOpt = themeSelect.querySelector('option[value="daily"]');
+      if (dailyOpt) dailyOpt.textContent = "Theme: Daily Palette";
+    }
+    if (STATE.clues.length > 0) renderCompass(STATE.clues);
+    return;
+  }
+
+  let paletteEntry = null;
+  let resolvedKey = themeKey;
+
+  if (themeKey === "daily") {
+    resolvedKey = getDailyPaletteKey();
+    paletteEntry = STATE.palettes[resolvedKey];
+  } else if (themeKey === "random") {
+    const keys = Object.keys(STATE.palettes);
+    resolvedKey = keys[Math.floor(Math.random() * keys.length)];
+    paletteEntry = STATE.palettes[resolvedKey];
+  } else if (STATE.palettes[themeKey]) {
+    paletteEntry = STATE.palettes[themeKey];
+  }
+
+  if (!paletteEntry || !paletteEntry.colors) return;
+
+  STATE.currentTheme = themeKey;
+  localStorage.setItem("geocentric_theme", themeKey);
+
+  const { primary, secondary, accent, light_shade, dark_shade } = paletteEntry.colors;
+
+  // 1. Dark Shade: Rich ambient canvas tint
+  const dRgb = hexToRgb(dark_shade.hex);
+  const dHsl = rgbToHsl(dRgb.r, dRgb.g, dRgb.b);
+  const baseHue = dHsl.h;
+  const baseSat = Math.min(dHsl.s, 32);
+
+  // 2. Semantic Contrast Engine (Slots: a=primary, b=secondary, c=accent, d=light, e=dark)
+  const pRgb = hexToRgb(primary.hex);
+  const aRgb = hexToRgb(accent.hex);
+  const sRgb = hexToRgb(secondary.hex);
+
+  const pLum = getRelativeLuminance(pRgb.r, pRgb.g, pRgb.b);
+
+  // If Slot A (primary) is too dark on the dark background, shift button to Slot C (accent)
+  let btnBg = primary.hex;
+  let btnCandidates = [accent.hex, secondary.hex, light_shade.hex, "#ffffff", "#0f172a"];
+
+  if (pLum < 0.18) {
+    btnBg = accent.hex; // Slot C
+    btnCandidates = [primary.hex, dark_shade.hex, secondary.hex, "#0f172a", "#ffffff"]; // Slot C has contrast to Slot A / Slot E
+  }
+
+  // Calculate WCAG contrast ratio between two hex colors
+  const getContrast = (c1, c2) => {
+    const rgb1 = hexToRgb(c1);
+    const rgb2 = hexToRgb(c2);
+    const l1 = getRelativeLuminance(rgb1.r, rgb1.g, rgb1.b);
+    const l2 = getRelativeLuminance(rgb2.r, rgb2.g, rgb2.b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  };
+
+  let btnTextColor = "#ffffff";
+  for (const cand of btnCandidates) {
+    if (getContrast(btnBg, cand) >= 2.8) {
+      btnTextColor = cand;
+      break;
+    }
+  }
+
+  const heroColor = btnBg;
+  const heroRgb = hexToRgb(heroColor);
+
+  // 3. Inject CSS Variables
+  root.style.setProperty("--bg-dark", `hsl(${baseHue}, ${baseSat}%, 7%)`);
+  root.style.setProperty("--bg-card", `hsla(${baseHue}, ${Math.min(baseSat, 26)}%, 14%, 0.75)`);
+  root.style.setProperty("--bg-input", `hsla(${baseHue}, ${Math.min(baseSat, 24)}%, 11%, 0.95)`);
+  root.style.setProperty("--bg-hover", `hsla(${baseHue}, ${Math.min(baseSat, 28)}%, 19%, 0.9)`);
+
+  root.style.setProperty("--accent", heroColor);
+  root.style.setProperty("--border-focus", heroColor);
+  root.style.setProperty("--accent-glow", `rgba(${heroRgb.r}, ${heroRgb.g}, ${heroRgb.b}, 0.32)`);
+
+  root.style.setProperty("--center-circle-fill", `hsla(${baseHue}, ${Math.min(baseSat, 30)}%, 10%, 0.95)`);
+  root.style.setProperty("--center-circle-stroke", heroColor);
+  root.style.setProperty("--center-question", accent.hex === heroColor ? primary.hex : accent.hex);
+
+  root.style.setProperty("--arrow-stroke", secondary.hex);
+  root.style.setProperty("--pill-fill", `hsla(${baseHue}, ${Math.min(baseSat, 30)}%, 12%, 0.72)`);
+  root.style.setProperty("--pill-border", `rgba(${sRgb.r}, ${sRgb.g}, ${sRgb.b}, 0.28)`);
+  root.style.setProperty("--pill-hover-fill", `hsla(${baseHue}, ${Math.min(baseSat, 30)}%, 18%, 0.85)`);
+
+  // 4. Guess Button: Text contrasts against the button background
+  root.style.setProperty("--btn-text", btnTextColor);
+
+  // Update theme dropdown label
+  const themeSelect = document.getElementById("theme-select");
+  if (themeSelect) {
+    themeSelect.value = themeKey === "random" ? "random" : (themeKey === "daily" ? "daily" : "classic");
+    const dailyOpt = themeSelect.querySelector('option[value="daily"]');
+    if (dailyOpt && (themeKey === "daily" || themeKey === "random")) {
+      dailyOpt.textContent = `Daily: ${primary.name}`;
+    }
+  }
+
+  // Re-render compass with the updated theme colors
+  if (STATE.clues.length > 0) {
+    renderCompass(STATE.clues);
+  }
+}
+
+// ==============================================================================
+// 4. CLUE SELECTION ALGORITHM (Pure Two-Phase Capacity-Aware)
 // ==============================================================================
 
 function selectClues(targetCity, pool, numClues = 5) {
@@ -153,7 +346,7 @@ function selectClues(targetCity, pool, numClues = 5) {
 }
 
 // ==============================================================================
-// 4. SVG COMPASS RENDERER (Dynamic Scaling + Layered Elements)
+// 5. SVG COMPASS RENDERER (Dynamic Scaling + Theme Color Support)
 // ==============================================================================
 
 function renderCompass(clues) {
@@ -164,7 +357,6 @@ function renderCompass(clues) {
   const cy = 300;
   const centerRadius = 54;
 
-  // SVG Helper: Create an element with namespace
   const createSvgElement = (tag, attrs = {}) => {
     const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
     for (const [key, val] of Object.entries(attrs)) {
@@ -173,7 +365,7 @@ function renderCompass(clues) {
     return el;
   };
 
-  // Defs: Reusable Crisp Arrowhead Markers for standard, hint, and wrong guess
+  // Defs: Reusable Crisp Arrowhead Markers
   const defs = createSvgElement("defs");
 
   const createMarker = (id, color) => {
@@ -193,15 +385,16 @@ function renderCompass(clues) {
     return m;
   };
 
-  defs.appendChild(createMarker("arrowhead", "#94a3b8"));
+  const arrowColor =
+    getComputedStyle(document.documentElement).getPropertyValue("--arrow-stroke").trim() ||
+    "#94a3b8";
+
+  defs.appendChild(createMarker("arrowhead", arrowColor));
   defs.appendChild(createMarker("arrowhead-hint", "#f59e0b"));
   defs.appendChild(createMarker("arrowhead-wrong", "#ef4444"));
   svg.appendChild(defs);
 
-  // SVG Layers to ensure proper z-index order:
-  // 1. Arrows Layer (bottom)
-  // 2. Pills Layer (middle)
-  // 3. Center Circle Layer (top)
+  // SVG Layers to guarantee proper z-index order:
   const arrowsLayer = createSvgElement("g", { class: "arrows-layer" });
   const pillsLayer = createSvgElement("g", { class: "pills-layer" });
   const centerLayer = createSvgElement("g", { class: "center-layer" });
@@ -218,14 +411,12 @@ function renderCompass(clues) {
   clues.forEach((clue, idx) => {
     const angleRad = (clue.bearing * Math.PI) / 180;
 
-    // Clean pill sizing (no emoji)
     const longestTextLen = Math.max(clue.name.length + 2, clue.state.length);
     const pillW = Math.max(124, Math.min(180, longestTextLen * 8.4 + 24));
     const pillH = 44;
-    const halfW = pillW / 2 + 10; // 10px horizontal collision clearance
-    const halfH = pillH / 2 + 8;  // 8px vertical collision clearance
+    const halfW = pillW / 2 + 10;
+    const halfH = pillH / 2 + 8;
 
-    // Start radius
     let currentR = 190;
 
     const checkCollision = (testX, testY) => {
@@ -237,15 +428,12 @@ function renderCompass(clues) {
     let posX = cx + currentR * Math.sin(angleRad);
     let posY = cy - currentR * Math.cos(angleRad);
 
-    // Expand outward radially as much as needed to guarantee zero overlaps
     while (checkCollision(posX, posY) && currentR < 700) {
       currentR += 14;
       posX = cx + currentR * Math.sin(angleRad);
       posY = cy - currentR * Math.cos(angleRad);
     }
 
-    // Mathematical Ray-Pill Boundary Intersection:
-    // Calculates exact distance from pill center to its edge along the bearing ray
     const absSin = Math.abs(Math.sin(angleRad)) + 0.0001;
     const absCos = Math.abs(Math.cos(angleRad)) + 0.0001;
     const edgeDist = Math.min((pillW / 2) / absSin, (pillH / 2) / absCos);
@@ -299,7 +487,6 @@ function renderCompass(clues) {
   placedPills.forEach((item) => {
     const { clue, angleRad, edgeDist, R } = item;
 
-    // Arrowhead tip touches the outer rim of the pill
     const arrowStopR = R - edgeDist - 4;
     const arrowLength = Math.max(20, arrowStopR - centerRadius);
 
@@ -355,7 +542,7 @@ function renderCompass(clues) {
     });
     pillGroup.appendChild(rect);
 
-    // City Name (Title) - Clean text without emojis
+    // City Name (Title)
     const titleText = createSvgElement("text", {
       x: pillX,
       y: pillY - 4,
@@ -404,27 +591,39 @@ function renderCompass(clues) {
     x: cx,
     y: cy + 16,
     class: "svg-center-text",
-    style: "font-size: 24px; fill: #38bdf8;",
+    style: "font-size: 24px; fill: var(--center-question, #38bdf8);",
   });
   centerText2.textContent = "?";
   centerLayer.appendChild(centerText2);
 }
 
 // ==============================================================================
-// 5. GAME LIFECYCLE & USER INTERACTIONS
+// 6. GAME LIFECYCLE & USER INTERACTIONS
 // ==============================================================================
 
 async function initGame() {
   try {
-    const res = await fetch("data/cities_india.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load dataset`);
-    STATE.allCities = await res.json();
+    const [citiesRes, palettesRes] = await Promise.all([
+      fetch("data/cities_india.json"),
+      fetch("daily_palettes.json").catch(() => null),
+    ]);
+
+    if (!citiesRes.ok) throw new Error(`HTTP ${citiesRes.status}: Failed to load cities`);
+    STATE.allCities = await citiesRes.json();
+
+    if (palettesRes && palettesRes.ok) {
+      STATE.palettes = await palettesRes.json();
+    }
+
+    // Apply saved theme preference (default: classic)
+    const savedTheme = localStorage.getItem("geocentric_theme") || "classic";
+    applyTheme(savedTheme);
 
     startNewRound();
     setupEventListeners();
   } catch (err) {
     console.error("Initialization error:", err);
-    alert("Error loading city dataset! Make sure the HTTP server is running.");
+    alert("Error loading dataset! Make sure the HTTP server is running.");
   }
 }
 
@@ -433,7 +632,7 @@ function startNewRound() {
   STATE.guesses = [];
   STATE.hintsUsed = 0;
 
-  // Filter pool by chosen tier (e.g., tier <= 100)
+  // Filter pool by chosen tier
   const pool = STATE.allCities.filter((c) => c.tier <= STATE.currentTier && c.tier !== 0);
 
   // Pick a random target city from the active pool
@@ -495,7 +694,6 @@ function addHintClue() {
 
   const pool = STATE.allCities.filter((c) => c.tier <= STATE.currentTier && c.tier !== 0);
 
-  // Names of cities already on compass or target
   const existingNames = new Set(STATE.clues.map((c) => c.name.toLowerCase()));
   existingNames.add(STATE.targetCity.name.toLowerCase());
 
@@ -522,7 +720,6 @@ function addHintClue() {
     }
   }
 
-  // Pick candidate city whose bearing from target is closest to the gap's bisector
   let bestCity = null;
   let bestDiff = Infinity;
   let bestBearing = 0;
@@ -653,7 +850,7 @@ function hideModals() {
 }
 
 // ==============================================================================
-// 6. AUTOCOMPLETE & UI LISTENERS
+// 7. AUTOCOMPLETE & UI LISTENERS
 // ==============================================================================
 
 function setupEventListeners() {
@@ -661,6 +858,7 @@ function setupEventListeners() {
   const submitBtn = document.getElementById("submit-btn");
   const suggestionsList = document.getElementById("suggestions-list");
   const tierSelect = document.getElementById("tier-select");
+  const themeSelect = document.getElementById("theme-select");
   const giveupBtn = document.getElementById("giveup-btn");
   const hintBtn = document.getElementById("hint-btn");
   const helpBtn = document.getElementById("help-btn");
@@ -704,6 +902,13 @@ function setupEventListeners() {
     STATE.currentTier = parseInt(e.target.value, 10);
     startNewRound();
   });
+
+  // Theme change listener
+  if (themeSelect) {
+    themeSelect.addEventListener("change", (e) => {
+      applyTheme(e.target.value);
+    });
+  }
 
   // Give up button listener
   if (giveupBtn) {
