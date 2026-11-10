@@ -118,6 +118,37 @@ body {
 }
 
 
+.text-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.text-btn:hover {
+  background: var(--bg-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.giveup-btn {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.giveup-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #fca5a5;
+}
+
 .icon-btn {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -197,24 +228,27 @@ body {
   gap: 6px;
 }
 
-.hint-btn {
+.hint-action-btn {
   background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(245, 158, 11, 0.35);
   color: #fbbf24;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 8px;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
   border-radius: 9999px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
 }
 
-.hint-btn:hover:not(:disabled) {
+.hint-action-btn:hover:not(:disabled) {
   background: rgba(245, 158, 11, 0.25);
   border-color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
 }
 
-.hint-btn:disabled {
+.hint-action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   filter: grayscale(1);
@@ -242,7 +276,7 @@ body {
 
 .compass-wrapper {
   width: 100%;
-  max-width: 480px;
+  max-width: min(100%, 75vh);
   aspect-ratio: 1 / 1;
   background: radial-gradient(circle at center, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0) 70%);
   border-radius: 50%;
@@ -300,6 +334,38 @@ body {
   fill: rgba(28, 42, 70, 0.85);
   stroke: rgba(56, 189, 248, 0.7);
   filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.35));
+}
+
+.svg-clue-pill.hint-pill {
+  stroke: #f59e0b;
+  fill: rgba(38, 28, 16, 0.85);
+  filter: drop-shadow(0 6px 14px rgba(245, 158, 11, 0.25));
+}
+
+.svg-clue-pill.hint-pill:hover {
+  stroke: #fbbf24;
+  fill: rgba(48, 36, 20, 0.95);
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.45));
+}
+
+.svg-clue-pill.wrong-guess-pill {
+  stroke: #ef4444;
+  fill: rgba(38, 18, 24, 0.88);
+  filter: drop-shadow(0 6px 14px rgba(239, 68, 68, 0.28));
+}
+
+.svg-clue-pill.wrong-guess-pill:hover {
+  stroke: #f87171;
+  fill: rgba(50, 22, 30, 0.95);
+  filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.45));
+}
+
+.svg-arrow-line.wrong-guess-arrow {
+  stroke: #ef4444;
+}
+
+.svg-arrow-line.hint-arrow {
+  stroke: #f59e0b;
 }
 
 .svg-clue-text-title {
@@ -592,7 +658,7 @@ body {
   }
 
   .compass-wrapper {
-    max-width: 660px;
+    max-width: min(720px, 80vh);
   }
 
 

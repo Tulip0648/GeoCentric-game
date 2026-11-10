@@ -5,8 +5,8 @@
  * 1. Dataset loading (fetch API)
  * 2. Mercator trigonometry & Haversine distance calculations
  * 3. Capacity-aware clue selection algorithm
- * 4. SVG Compass rendering
- * 5. Guess validation, hint reveals, and game state
+ * 4. Collision-free SVG Compass rendering with dynamic scaling
+ * 5. Hint additions, wrong guess compass plotting, and game state
  */
 
 // ==============================================================================
@@ -17,11 +17,11 @@ const STATE = {
   allCities: [],
   currentTier: 100,      // Default: Medium (Top 100)
   targetCity: null,      // The mystery center city
-  clues: [],             // 5 reference cities around target
-  revealedHints: new Set(), // Set of clue indices whose distances are revealed
+  clues: [],             // Initial reference cities + hints + wrong guesses
   guesses: [],           // Player attempts (max 6)
   maxGuesses: 6,
-  maxHints: 3,
+  hintsUsed: 0,
+  maxHints: 2,           // Maximum 2 hints per round
   isGameOver: false,
 };
 
@@ -153,7 +153,7 @@ function selectClues(targetCity, pool, numClues = 5) {
 }
 
 // ==============================================================================
-// 4. SVG COMPASS RENDERER (Collision-Free Radial Placement Solver)
+// 4. SVG COMPASS RENDERER (Dynamic Scaling + Layered Elements)
 // ==============================================================================
 
 function renderCompass(clues) {
@@ -173,41 +173,59 @@ function renderCompass(clues) {
     return el;
   };
 
-  // Defs: Reusable Crisp Arrowhead Marker
+  // Defs: Reusable Crisp Arrowhead Markers for standard, hint, and wrong guess
   const defs = createSvgElement("defs");
-  const marker = createSvgElement("marker", {
-    id: "arrowhead",
-    markerWidth: "10",
-    markerHeight: "10",
-    refX: "8",
-    refY: "5",
-    orient: "auto",
-  });
-  const polygon = createSvgElement("polygon", {
-    points: "0 2, 8 5, 0 8",
-    fill: "#94a3b8",
-  });
-  marker.appendChild(polygon);
-  defs.appendChild(marker);
+
+  const createMarker = (id, color) => {
+    const m = createSvgElement("marker", {
+      id,
+      markerWidth: "10",
+      markerHeight: "10",
+      refX: "8",
+      refY: "5",
+      orient: "auto",
+    });
+    const p = createSvgElement("polygon", {
+      points: "0 2, 8 5, 0 8",
+      fill: color,
+    });
+    m.appendChild(p);
+    return m;
+  };
+
+  defs.appendChild(createMarker("arrowhead", "#94a3b8"));
+  defs.appendChild(createMarker("arrowhead-hint", "#f59e0b"));
+  defs.appendChild(createMarker("arrowhead-wrong", "#ef4444"));
   svg.appendChild(defs);
 
+  // SVG Layers to ensure proper z-index order:
+  // 1. Arrows Layer (bottom)
+  // 2. Pills Layer (middle)
+  // 3. Center Circle Layer (top)
+  const arrowsLayer = createSvgElement("g", { class: "arrows-layer" });
+  const pillsLayer = createSvgElement("g", { class: "pills-layer" });
+  const centerLayer = createSvgElement("g", { class: "center-layer" });
+
+  svg.appendChild(arrowsLayer);
+  svg.appendChild(pillsLayer);
+  svg.appendChild(centerLayer);
+
   // ----------------------------------------------------------------------------
-  // COLLISION-FREE RADIAL SOLVER (Scaled Pills + Exact Boundary Contact)
+  // COLLISION-FREE RADIAL SOLVER (Unrestricted Outward Expansion)
   // ----------------------------------------------------------------------------
-  const placedPills = []; // Stores { x, y, halfW, halfH, R }
+  const placedPills = [];
 
   clues.forEach((clue, idx) => {
     const angleRad = (clue.bearing * Math.PI) / 180;
-    const isHinted = STATE.revealedHints.has(idx);
 
-    // Scaled pill dimensions (+12-15% bigger)
-    const longestTextLen = Math.max(clue.name.length + 4, clue.state.length);
-    const pillW = Math.max(120, Math.min(176, longestTextLen * 8.2 + 24));
-    const pillH = isHinted ? 52 : 42;
-    const halfW = pillW / 2 + 8; // 8px collision margin
-    const halfH = pillH / 2 + 8;
+    // Clean pill sizing (no emoji)
+    const longestTextLen = Math.max(clue.name.length + 2, clue.state.length);
+    const pillW = Math.max(124, Math.min(180, longestTextLen * 8.4 + 24));
+    const pillH = 44;
+    const halfW = pillW / 2 + 10; // 10px horizontal collision clearance
+    const halfH = pillH / 2 + 8;  // 8px vertical collision clearance
 
-    // Start at comfortable base radius
+    // Start radius
     let currentR = 190;
 
     const checkCollision = (testX, testY) => {
@@ -219,7 +237,8 @@ function renderCompass(clues) {
     let posX = cx + currentR * Math.sin(angleRad);
     let posY = cy - currentR * Math.cos(angleRad);
 
-    while (checkCollision(posX, posY) && currentR < 350) {
+    // Expand outward radially as much as needed to guarantee zero overlaps
+    while (checkCollision(posX, posY) && currentR < 700) {
       currentR += 14;
       posX = cx + currentR * Math.sin(angleRad);
       posY = cy - currentR * Math.cos(angleRad);
@@ -227,15 +246,14 @@ function renderCompass(clues) {
 
     // Mathematical Ray-Pill Boundary Intersection:
     // Calculates exact distance from pill center to its edge along the bearing ray
-    const absSin = Math.abs(Math.sin(angleRad)) + 0.001;
-    const absCos = Math.abs(Math.cos(angleRad)) + 0.001;
+    const absSin = Math.abs(Math.sin(angleRad)) + 0.0001;
+    const absCos = Math.abs(Math.cos(angleRad)) + 0.0001;
     const edgeDist = Math.min((pillW / 2) / absSin, (pillH / 2) / absCos);
 
     placedPills.push({
       clue,
       idx,
       angleRad,
-      isHinted,
       pillW,
       pillH,
       edgeDist,
@@ -247,38 +265,83 @@ function renderCompass(clues) {
     });
   });
 
-  // Draw Radiating Clues (Arrows + City Pills)
-  placedPills.forEach((item) => {
-    const { clue, idx, angleRad, isHinted, pillW, pillH, edgeDist, x: pillX, y: pillY, R } = item;
+  // ----------------------------------------------------------------------------
+  // DYNAMIC VIEWBOX COMPUTATION (Maximizes size to fill all available space)
+  // ----------------------------------------------------------------------------
+  let minX = cx - centerRadius;
+  let maxX = cx + centerRadius;
+  let minY = cy - centerRadius;
+  let maxY = cy + centerRadius;
 
-    // Arrow length is calculated so the arrowhead tip JUST touches the pill's outer rim!
+  placedPills.forEach((p) => {
+    minX = Math.min(minX, p.x - p.pillW / 2);
+    maxX = Math.max(maxX, p.x + p.pillW / 2);
+    minY = Math.min(minY, p.y - p.pillH / 2);
+    maxY = Math.max(maxY, p.y + p.pillH / 2);
+  });
+
+  const padding = 20;
+  const maxSpan = Math.max(
+    Math.abs(minX - cx),
+    Math.abs(maxX - cx),
+    Math.abs(minY - cy),
+    Math.abs(maxY - cy)
+  ) + padding;
+
+  const vbX = Math.round(cx - maxSpan);
+  const vbY = Math.round(cy - maxSpan);
+  const vbSize = Math.round(maxSpan * 2);
+  svg.setAttribute("viewBox", `${vbX} ${vbY} ${vbSize} ${vbSize}`);
+
+  // ----------------------------------------------------------------------------
+  // DRAW ARROWS INTO ARROWS LAYER
+  // ----------------------------------------------------------------------------
+  placedPills.forEach((item) => {
+    const { clue, angleRad, edgeDist, R } = item;
+
+    // Arrowhead tip touches the outer rim of the pill
     const arrowStopR = R - edgeDist - 4;
     const arrowLength = Math.max(20, arrowStopR - centerRadius);
 
-    // Arrow starts at edge of center circle
     const startX = cx + centerRadius * Math.sin(angleRad);
     const startY = cy - centerRadius * Math.cos(angleRad);
-
-    // Arrow ends precisely at the outer rim of the pill
     const endX = cx + (centerRadius + arrowLength) * Math.sin(angleRad);
     const endY = cy - (centerRadius + arrowLength) * Math.cos(angleRad);
 
-    // Line with arrow head
+    let markerId = "arrowhead";
+    let lineClass = "svg-arrow-line";
+    if (clue.isWrongGuess) {
+      markerId = "arrowhead-wrong";
+      lineClass += " wrong-guess-arrow";
+    } else if (clue.isHint) {
+      markerId = "arrowhead-hint";
+      lineClass += " hint-arrow";
+    }
+
     const line = createSvgElement("line", {
       x1: startX,
       y1: startY,
       x2: endX,
       y2: endY,
-      class: "svg-arrow-line",
-      "marker-end": "url(#arrowhead)",
+      class: lineClass,
+      "marker-end": `url(#${markerId})`,
     });
-    svg.appendChild(line);
+    arrowsLayer.appendChild(line);
+  });
 
-    // Group for Pill + Text
+  // ----------------------------------------------------------------------------
+  // DRAW PILLS INTO PILLS LAYER
+  // ----------------------------------------------------------------------------
+  placedPills.forEach((item) => {
+    const { clue, pillW, pillH, x: pillX, y: pillY } = item;
+
     const pillGroup = createSvgElement("g", {
       class: "svg-clue-group",
-      style: "cursor: pointer;",
     });
+
+    let pillClass = "svg-clue-pill";
+    if (clue.isWrongGuess) pillClass += " wrong-guess-pill";
+    else if (clue.isHint) pillClass += " hint-pill";
 
     const radius = pillH / 2;
     const rect = createSvgElement("rect", {
@@ -288,62 +351,45 @@ function renderCompass(clues) {
       height: pillH,
       rx: radius,
       ry: radius,
-      class: "svg-clue-pill",
+      class: pillClass,
     });
-
-    if (isHinted) {
-      rect.style.stroke = "#f59e0b";
-      rect.style.fill = "rgba(40, 30, 20, 0.85)";
-    }
-
     pillGroup.appendChild(rect);
 
-    // City Name (Title)
+    // City Name (Title) - Clean text without emojis
     const titleText = createSvgElement("text", {
       x: pillX,
-      y: isHinted ? pillY - 11 : pillY - 5,
+      y: pillY - 4,
       class: "svg-clue-text-title",
     });
-    titleText.textContent = `🇮🇳 ${clue.name}`;
+    titleText.textContent = clue.name;
     pillGroup.appendChild(titleText);
 
-    // State / Distance (Sub)
+    // State / Tag (Sub)
     const subText = createSvgElement("text", {
       x: pillX,
-      y: isHinted ? pillY + 6 : pillY + 12,
+      y: pillY + 12,
       class: "svg-clue-text-sub",
     });
-    subText.textContent = clue.state;
+    subText.textContent = clue.isWrongGuess
+      ? `${clue.state} (Guess)`
+      : clue.isHint
+      ? `${clue.state} (Hint)`
+      : clue.state;
     pillGroup.appendChild(subText);
 
-    // If hinted, display distance badge
-    if (isHinted) {
-      const distText = createSvgElement("text", {
-        x: pillX,
-        y: pillY + 20,
-        class: "svg-clue-text-sub",
-        style: "fill: #fbbf24; font-weight: 700; font-size: 11px;",
-      });
-      distText.textContent = `📏 ${clue.distanceKm} km away`;
-      pillGroup.appendChild(distText);
-    }
-
-    // Clicking a pill directly reveals its distance (uses 1 hint)
-    pillGroup.addEventListener("click", () => revealClueHint(idx));
-
-    svg.appendChild(pillGroup);
+    pillsLayer.appendChild(pillGroup);
   });
 
-  // Center Mystery Circle
-
+  // ----------------------------------------------------------------------------
+  // DRAW CENTER MYSTERY CIRCLE
+  // ----------------------------------------------------------------------------
   const centerCircle = createSvgElement("circle", {
-
     cx,
     cy,
     r: centerRadius,
     class: "svg-center-circle",
   });
-  svg.appendChild(centerCircle);
+  centerLayer.appendChild(centerCircle);
 
   // Center Text: "City ?"
   const centerText1 = createSvgElement("text", {
@@ -352,7 +398,7 @@ function renderCompass(clues) {
     class: "svg-center-text",
   });
   centerText1.textContent = "City";
-  svg.appendChild(centerText1);
+  centerLayer.appendChild(centerText1);
 
   const centerText2 = createSvgElement("text", {
     x: cx,
@@ -361,7 +407,7 @@ function renderCompass(clues) {
     style: "font-size: 24px; fill: #38bdf8;",
   });
   centerText2.textContent = "?";
-  svg.appendChild(centerText2);
+  centerLayer.appendChild(centerText2);
 }
 
 // ==============================================================================
@@ -370,15 +416,11 @@ function renderCompass(clues) {
 
 async function initGame() {
   try {
-    // 1. Fetch JSON dataset from frontend/data/cities_india.json
     const res = await fetch("data/cities_india.json");
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load dataset`);
     STATE.allCities = await res.json();
 
-    // 2. Start a fresh round
     startNewRound();
-
-    // 3. Setup UI Event Listeners
     setupEventListeners();
   } catch (err) {
     console.error("Initialization error:", err);
@@ -389,7 +431,7 @@ async function initGame() {
 function startNewRound() {
   STATE.isGameOver = false;
   STATE.guesses = [];
-  STATE.revealedHints.clear();
+  STATE.hintsUsed = 0;
 
   // Filter pool by chosen tier (e.g., tier <= 100)
   const pool = STATE.allCities.filter((c) => c.tier <= STATE.currentTier && c.tier !== 0);
@@ -413,16 +455,18 @@ function startNewRound() {
   document.getElementById("submit-btn").disabled = false;
   cityInput.focus();
 
-  console.log(`[Cheat Code / Debug] Mystery City: ${STATE.targetCity.name} (${STATE.targetCity.state})`);
+  console.log(`[GeoCentric] Mystery City: ${STATE.targetCity.name} (${STATE.targetCity.state})`);
 }
 
 function updateStatusUI() {
   document.getElementById("guesses-count").textContent = `${STATE.guesses.length} / ${STATE.maxGuesses}`;
 
-  const hintBtns = document.querySelectorAll(".hint-btn");
-  hintBtns.forEach((btn, idx) => {
-    btn.disabled = idx < STATE.revealedHints.size || STATE.revealedHints.size >= STATE.maxHints;
-  });
+  const hintBtn = document.getElementById("hint-btn");
+  if (hintBtn) {
+    const hintsLeft = STATE.maxHints - STATE.hintsUsed;
+    hintBtn.textContent = `Hint (${hintsLeft} left)`;
+    hintBtn.disabled = hintsLeft <= 0 || STATE.isGameOver;
+  }
 }
 
 function updateGuessesUI() {
@@ -436,26 +480,76 @@ function updateGuessesUI() {
 
     if (guessedName.toLowerCase() === STATE.targetCity.name.toLowerCase()) {
       slot.classList.add("correct");
-      slot.textContent = `${guessedName} ✅`;
+      slot.textContent = `${guessedName} (Correct)`;
     } else {
       slot.classList.add("wrong");
-      slot.textContent = `${guessedName} ❌`;
+      slot.textContent = `${guessedName}`;
     }
 
     container.appendChild(slot);
   });
 }
 
+function addHintClue() {
+  if (STATE.isGameOver || STATE.hintsUsed >= STATE.maxHints) return;
 
-function revealClueHint(clueIndex) {
-  if (STATE.isGameOver) return;
-  if (STATE.revealedHints.has(clueIndex)) return;
-  if (STATE.revealedHints.size >= STATE.maxHints) {
-    alert("You have used all 3 hints!");
+  const pool = STATE.allCities.filter((c) => c.tier <= STATE.currentTier && c.tier !== 0);
+
+  // Names of cities already on compass or target
+  const existingNames = new Set(STATE.clues.map((c) => c.name.toLowerCase()));
+  existingNames.add(STATE.targetCity.name.toLowerCase());
+
+  const candidates = pool.filter((c) => !existingNames.has(c.name.toLowerCase()));
+  if (candidates.length === 0) {
+    alert("No more eligible hint cities in this difficulty tier.");
     return;
   }
 
-  STATE.revealedHints.add(clueIndex);
+  // Find the largest angular gap between existing clues
+  let maxGap = -1;
+  let targetAngle = 0;
+
+  for (let i = 0; i < STATE.clues.length; i++) {
+    const curBearing = STATE.clues[i].bearing;
+    const nextBearing =
+      i === STATE.clues.length - 1
+        ? STATE.clues[0].bearing + 360
+        : STATE.clues[i + 1].bearing;
+    const gap = nextBearing - curBearing;
+    if (gap > maxGap) {
+      maxGap = gap;
+      targetAngle = (curBearing + gap / 2) % 360;
+    }
+  }
+
+  // Pick candidate city whose bearing from target is closest to the gap's bisector
+  let bestCity = null;
+  let bestDiff = Infinity;
+  let bestBearing = 0;
+  let bestDist = 0;
+
+  for (const c of candidates) {
+    const b = mercatorBearing(STATE.targetCity.lat, STATE.targetCity.lon, c.lat, c.lon);
+    const diff = angularDistance(b, targetAngle);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestCity = c;
+      bestBearing = Math.round(b * 10) / 10;
+      bestDist = haversineDistanceKm(STATE.targetCity.lat, STATE.targetCity.lon, c.lat, c.lon);
+    }
+  }
+
+  if (!bestCity) return;
+
+  STATE.hintsUsed++;
+  STATE.clues.push({
+    ...bestCity,
+    bearing: bestBearing,
+    distanceKm: bestDist,
+    isHint: true,
+  });
+
+  STATE.clues.sort((a, b) => a.bearing - b.bearing);
   renderCompass(STATE.clues);
   updateStatusUI();
 }
@@ -464,36 +558,56 @@ function submitGuess(cityName) {
   if (STATE.isGameOver || !cityName) return;
 
   const cleanName = cityName.trim();
-  // Check if city exists in dataset
   const match = STATE.allCities.find((c) => c.name.toLowerCase() === cleanName.toLowerCase());
   if (!match) {
     alert(`"${cleanName}" is not in our city database! Please pick from suggestions.`);
     return;
   }
 
-  // Record guess
+  if (STATE.guesses.some((g) => g.toLowerCase() === match.name.toLowerCase())) {
+    alert(`You already guessed ${match.name}! Try another city.`);
+    return;
+  }
+
   STATE.guesses.push(match.name);
   updateGuessesUI();
-  updateStatusUI();
 
-  // Clear input
   const cityInput = document.getElementById("city-input");
   cityInput.value = "";
   hideSuggestions();
 
   // Check Win condition
   if (match.name.toLowerCase() === STATE.targetCity.name.toLowerCase()) {
-    endGame(true);
+    endGame(true, false);
     return;
   }
 
+  // Wrong guess: plot onto compass
+  const alreadyInClues = STATE.clues.some((c) => c.name.toLowerCase() === match.name.toLowerCase());
+  if (!alreadyInClues) {
+    const bearing = mercatorBearing(STATE.targetCity.lat, STATE.targetCity.lon, match.lat, match.lon);
+    const distanceKm = haversineDistanceKm(STATE.targetCity.lat, STATE.targetCity.lon, match.lat, match.lon);
+
+    STATE.clues.push({
+      ...match,
+      bearing: Math.round(bearing * 10) / 10,
+      distanceKm,
+      isWrongGuess: true,
+    });
+
+    STATE.clues.sort((a, b) => a.bearing - b.bearing);
+    renderCompass(STATE.clues);
+  }
+
+  updateStatusUI();
+
   // Check Loss condition (exhausted 6 attempts)
   if (STATE.guesses.length >= STATE.maxGuesses) {
-    endGame(false);
+    endGame(false, false);
   }
 }
 
-function endGame(isWin) {
+function endGame(isWin, isGiveUp = false) {
   STATE.isGameOver = true;
   document.getElementById("city-input").disabled = true;
   document.getElementById("submit-btn").disabled = true;
@@ -504,24 +618,33 @@ function endGame(isWin) {
     centerCircle.style.fill = isWin ? "#065f46" : "#7f1d1d";
     centerCircle.style.stroke = isWin ? "#10b981" : "#ef4444";
   }
+
   const centerText1 = document.querySelector(".svg-center-text");
   if (centerText1) centerText1.textContent = STATE.targetCity.name;
-  const centerText2 = document.querySelectorAll(".svg-center-text")[1];
-  if (centerText2) centerText2.textContent = isWin ? "🎉" : "❌";
 
-  // Show Game Over Modal
+  const centerText2 = document.querySelectorAll(".svg-center-text")[1];
+  if (centerText2) {
+    centerText2.textContent = STATE.targetCity.state;
+    centerText2.style.fontSize = "13px";
+    centerText2.style.fill = "#94a3b8";
+  }
+
+  // Show Game Over Modal (strictly no emojis)
   const modal = document.getElementById("game-over-modal");
   const title = document.getElementById("game-over-title");
   const desc = document.getElementById("game-over-desc");
   const sol = document.getElementById("game-over-solution");
 
-  title.textContent = isWin ? "Outstanding!" : "Nice Try!";
+  title.textContent = isWin ? "Outstanding!" : (isGiveUp ? "Game Over" : "Nice Try!");
   desc.textContent = isWin
     ? `You solved the compass in ${STATE.guesses.length} attempt(s)!`
-    : `You ran out of guesses. The mystery city was:`;
-  sol.textContent = `📍 ${STATE.targetCity.name}, ${STATE.targetCity.state}`;
+    : isGiveUp
+    ? "You gave up. The mystery city was:"
+    : "You ran out of guesses. The mystery city was:";
+  sol.textContent = `${STATE.targetCity.name}, ${STATE.targetCity.state}`;
 
   modal.classList.remove("hidden");
+  updateStatusUI();
 }
 
 function hideModals() {
@@ -538,7 +661,8 @@ function setupEventListeners() {
   const submitBtn = document.getElementById("submit-btn");
   const suggestionsList = document.getElementById("suggestions-list");
   const tierSelect = document.getElementById("tier-select");
-  const refreshBtn = document.getElementById("refresh-btn");
+  const giveupBtn = document.getElementById("giveup-btn");
+  const hintBtn = document.getElementById("hint-btn");
   const helpBtn = document.getElementById("help-btn");
   const closeModalBtn = document.getElementById("close-modal-btn");
   const playAgainBtn = document.getElementById("play-again-btn");
@@ -551,9 +675,8 @@ function setupEventListeners() {
       return;
     }
 
-    // Filter cities matching search query
     const matches = STATE.allCities
-      .filter((c) => (c.name.toLowerCase().includes(query) && c.tier <= STATE.currentTier))
+      .filter((c) => c.name.toLowerCase().includes(query) && c.tier <= STATE.currentTier)
       .slice(0, 6);
 
     renderSuggestions(matches);
@@ -582,21 +705,21 @@ function setupEventListeners() {
     startNewRound();
   });
 
-  // Refresh practice puzzle
-  refreshBtn.addEventListener("click", () => startNewRound());
-
-  // Hint Buttons
-  document.querySelectorAll(".hint-btn").forEach((btn, idx) => {
-    btn.addEventListener("click", () => {
-      // Find first unrevealed clue and reveal its distance
-      for (let i = 0; i < STATE.clues.length; i++) {
-        if (!STATE.revealedHints.has(i)) {
-          revealClueHint(i);
-          break;
-        }
+  // Give up button listener
+  if (giveupBtn) {
+    giveupBtn.addEventListener("click", () => {
+      if (!STATE.isGameOver) {
+        endGame(false, true);
       }
     });
-  });
+  }
+
+  // Hint button listener
+  if (hintBtn) {
+    hintBtn.addEventListener("click", () => {
+      addHintClue();
+    });
+  }
 
   // Help modal toggle
   helpBtn.addEventListener("click", () => {

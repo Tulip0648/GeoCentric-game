@@ -25,7 +25,7 @@
       
       <div class="header-controls-row">
         <div class="header-left">
-          <button id="help-btn" class="icon-btn" title="How to Play" aria-label="How to play">❓</button>
+          <button id="help-btn" class="text-btn">How to Play</button>
         </div>
         
         <div class="header-right">
@@ -37,7 +37,7 @@
             <option value="350">Hard (Top 350)</option>
             <option value="500">Expert (Top 500)</option>
           </select>
-          <button id="refresh-btn" class="icon-btn" title="New Practice Puzzle" aria-label="New Practice Puzzle">🔄</button>
+          <button id="giveup-btn" class="text-btn giveup-btn" title="Give up and reveal city">Give Up</button>
         </div>
       </div>
     </header>
@@ -48,12 +48,7 @@
       <!-- Top Status Bar: Clue count & Hints left -->
       <section class="status-bar">
         <div class="hints-box">
-          <span class="status-label">Hints:</span>
-          <div id="hints-tokens" class="tokens-row">
-            <button class="hint-btn" data-hint="1" title="Reveal distance to 1 clue">💡 1</button>
-            <button class="hint-btn" data-hint="2" title="Reveal distance to 1 clue">💡 2</button>
-            <button class="hint-btn" data-hint="3" title="Reveal distance to 1 clue">💡 3</button>
-          </div>
+          <button id="hint-btn" class="hint-action-btn" title="Add another reference city to the compass">Hint (2 left)</button>
         </div>
         <div class="guesses-left-box">
           <span class="status-label">Attempts:</span>
@@ -105,10 +100,11 @@
         <ul>
           <li><strong>Arrows:</strong> Point directly towards surrounding reference cities based on their true geographic bearing.</li>
           <li><strong>Reference Cities:</strong> Displayed at the tip of each arrow with their state.</li>
-          <li><strong>Hints:</strong> You have 3 hints to reveal the exact distance (km) to any clue city of your choice.</li>
+          <li><strong>Hints:</strong> You have 2 hints per round. Each hint adds an extra reference city to the compass.</li>
+          <li><strong>Wrong Guesses:</strong> Incorrect guesses are automatically plotted onto the compass to help you triangulate.</li>
           <li><strong>Goal:</strong> Guess the central mystery city within <strong>6 attempts</strong>.</li>
         </ul>
-        <button id="close-modal-btn" class="modal-close-btn">Got it!</button>
+        <button id="close-modal-btn" class="modal-close-btn">Got it</button>
       </div>
     </div>
 
@@ -118,7 +114,7 @@
         <h2 id="game-over-title">Game Over</h2>
         <p id="game-over-desc"></p>
         <div id="game-over-solution" class="solution-highlight"></div>
-        <button id="play-again-btn" class="modal-close-btn">Play Another Round</button>
+        <button id="play-again-btn" class="modal-close-btn">Play Again</button>
       </div>
     </div>
 
